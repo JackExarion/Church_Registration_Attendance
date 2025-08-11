@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Church Registration & Attendance System</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="screen active">
+            <div class="login-container">
+                <div class="login-header">
+                    <i class="fas fa-church"></i>
+                    <h1>Church Registration & Attendance</h1>
+                    <p>Welcome to our church management system</p>
+                </div>
+                <form id="loginForm" class="login-form">
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
+                <div class="login-footer">
+                    <p>Don't have an account? <a href="#" id="showRegister">Register here</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registration Screen -->
+        <div id="registerScreen" class="screen">
+            <div class="register-container">
+                <div class="register-header">
+                    <i class="fas fa-user-plus"></i>
+                    <h1>Register New Account</h1>
+                    <p>Create your church account</p>
+                </div>
+                <form id="registerForm" class="register-form">
+                    <div class="form-group">
+                        <label for="regName">Full Name</label>
+                        <input type="text" id="regName" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regEmail">Email</label>
+                        <input type="email" id="regEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regPassword">Password</label>
+                        <input type="password" id="regPassword" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="regRole">Role</label>
+                        <select id="regRole" required>
+                            <option value="">Select Role</option>
+                            <option value="member">Member</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Register</button>
+                </form>
+                <div class="register-footer">
+                    <p>Already have an account? <a href="#" id="showLogin">Login here</a></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Member Information Screen -->
+        <div id="memberInfoScreen" class="screen">
+            <div class="member-info-container">
+                <div class="member-info-header">
+                    <i class="fas fa-user-edit"></i>
+                    <h1>Complete Your Member Profile</h1>
+                    <p>Please provide your complete information to complete your registration</p>
+                </div>
+                <form id="memberInfoForm" class="member-info-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="memberName">Full Name</label>
+                            <input type="text" id="memberName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="memberEmail">Email</label>
+                            <input type="email" id="memberEmail" required readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="memberPhone">Phone</label>
+                            <input type="tel" id="memberPhone" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="memberAddress">Address</label>
+                            <input type="text" id="memberAddress" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="memberBirthDate">Birth Date</label>
+                            <input type="date" id="memberBirthDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="memberGender">Gender</label>
+                            <select id="memberGender" required>
+                                <option value="">Select Gender</option>
+                                <option value="male">Male</option>
+                                <option value="female">Female</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="memberNotes">Additional Notes (Optional)</label>
+                        <textarea id="memberNotes" rows="3" placeholder="Any additional information you'd like to share..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Complete Registration</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Dashboard -->
+        <div id="dashboardScreen" class="screen">
+            <nav class="navbar">
+                <div class="nav-brand">
+                    <i class="fas fa-church"></i>
+                    <span>Church Management</span>
+                </div>
+                <div class="nav-user">
+                    <span id="userName"></span>
+                    <span id="userRole"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </nav>
+
+            <div class="dashboard-content">
+                <div class="sidebar">
+                    <ul class="nav-menu">
+                        <li><a href="#" data-section="overview" class="nav-link active"><i class="fas fa-home"></i> Overview</a></li>
+                        <li><a href="#" data-section="registration" class="nav-link"><i class="fas fa-users"></i> Member Management</a></li>
+                        <li><a href="#" data-section="attendance" class="nav-link"><i class="fas fa-calendar-check"></i> Attendance</a></li>
+                        <li><a href="#" data-section="members" class="nav-link"><i class="fas fa-users"></i> Members</a></li>
+                        <li><a href="#" data-section="reports" class="nav-link"><i class="fas fa-chart-bar"></i> Reports</a></li>
+                        <li id="adminSection" style="display: none;">
+                            <a href="#" data-section="admin" class="nav-link"><i class="fas fa-cog"></i> Admin Panel</a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="main-content">
+                    <!-- Overview Section -->
+                    <div id="overview" class="content-section active">
+                        <h2>Dashboard Overview</h2>
+                        <div class="stats-grid">
+                            <div class="stat-card">
+                                <i class="fas fa-users"></i>
+                                <div class="stat-info">
+                                    <h3 id="totalMembers">0</h3>
+                                    <p>Total Members</p>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-calendar-check"></i>
+                                <div class="stat-info">
+                                    <h3 id="todayAttendance">0</h3>
+                                    <p>Today's Attendance</p>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-church"></i>
+                                <div class="stat-info">
+                                    <h3 id="totalServices">0</h3>
+                                    <p>Total Services</p>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <i class="fas fa-percentage"></i>
+                                <div class="stat-info">
+                                    <h3 id="attendanceRate">0%</h3>
+                                    <p>Attendance Rate</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="recent-activity">
+                            <h3>Recent Activity</h3>
+                            <div id="recentActivityList" class="activity-list">
+                                <!-- Recent activities will be populated here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Member Management Section -->
+                    <div id="registration" class="content-section">
+                        <h2>Member Management</h2>
+                        <div class="member-management-controls">
+                            <button id="addMemberBtn" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add New Member
+                            </button>
+                            <input type="text" id="memberSearch" placeholder="Search members..." class="search-input">
+                            <button id="exportMembersBtn" class="btn btn-secondary">Export</button>
+                        </div>
+                        
+                        <!-- Members List -->
+                        <div id="membersList" class="members-list">
+                            <!-- Members list will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Attendance Section -->
+                    <div id="attendance" class="content-section">
+                        <h2>Attendance Management</h2>
+                        <div class="attendance-controls">
+                            <div class="date-selector">
+                                <label for="attendanceDate">Service Date:</label>
+                                <input type="date" id="attendanceDate">
+                                <button id="loadMembersBtn" class="btn btn-secondary">Load Members</button>
+                            </div>
+                            <div class="attendance-actions">
+                                <button id="markAllPresentBtn" class="btn btn-success">Mark All Present</button>
+                                <button id="clearAttendanceBtn" class="btn btn-warning">Clear Attendance</button>
+                                <button id="saveAttendanceBtn" class="btn btn-primary">Save Attendance</button>
+                            </div>
+                        </div>
+                        <div id="attendanceList" class="attendance-list">
+                            <!-- Attendance list will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Members Section -->
+                    <div id="members" class="content-section">
+                        <h2>Members Directory</h2>
+                        <div class="members-controls">
+                            <input type="text" id="memberSearch" placeholder="Search members..." class="search-input">
+                            <button id="exportMembersBtn" class="btn btn-secondary">Export</button>
+                        </div>
+                        <div id="membersList" class="members-list">
+                            <!-- Members list will be populated here -->
+                        </div>
+                    </div>
+
+                    <!-- Reports Section -->
+                    <div id="reports" class="content-section">
+                        <h2>Reports & Analytics</h2>
+                        <div class="reports-grid">
+                            <div class="report-card">
+                                <h3>Attendance Report</h3>
+                                <div class="date-range">
+                                    <label>From:</label>
+                                    <input type="date" id="reportStartDate">
+                                    <label>To:</label>
+                                    <input type="date" id="reportEndDate">
+                                    <button id="generateAttendanceReport" class="btn btn-primary">Generate</button>
+                                </div>
+                                <div id="attendanceReport" class="report-content">
+                                    <!-- Report content will be populated here -->
+                                </div>
+                            </div>
+                            <div class="report-card">
+                                <h3>Member Statistics</h3>
+                                <div id="memberStats" class="report-content">
+                                    <!-- Member statistics will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Admin Section -->
+                    <div id="admin" class="content-section">
+                        <h2>Admin Panel</h2>
+                        <div class="admin-grid">
+                            <div class="admin-card">
+                                <h3>User Management</h3>
+                                <div id="usersList" class="admin-list">
+                                    <!-- Users list will be populated here -->
+                                </div>
+                            </div>
+                            <div class="admin-card">
+                                <h3>System Settings</h3>
+                                <form id="systemSettingsForm" class="settings-form">
+                                    <div class="form-group">
+                                        <label for="churchName">Church Name</label>
+                                        <input type="text" id="churchName" value="Our Church">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="serviceTime">Default Service Time</label>
+                                        <input type="time" id="serviceTime" value="10:00">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="maxCapacity">Maximum Capacity</label>
+                                        <input type="number" id="maxCapacity" value="200">
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-database-compat.js"></script>
+    
+    <script src="app.js"></script>
+</body>
+</html> 
