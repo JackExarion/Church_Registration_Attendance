@@ -13,14 +13,15 @@
    - **Name**: Your full name
    - **Email**: Your email address
    - **Password**: Choose a secure password
-   - **Role**: Select "Admin" for full access
+   - **Role**: Select "Admin" for full access (or "Member" for limited access)
 3. Click "Register"
 
 ### Step 3: Member Registration Flow
 **For Members:**
 1. Register with role "Member"
-2. Complete the member information form
-3. Login to access the system
+2. Immediately complete the Member Information form (shown right after registration)
+3. The system automatically creates a basic member entry at registration and updates it after the form is submitted
+4. Login to access the system (Members can access only Overview and Members)
 
 **For Admins:**
 1. Register with role "Admin"
@@ -31,12 +32,17 @@
 2. You'll see the dashboard with overview statistics
 3. Start managing members and tracking attendance!
 
-## 🔐 Pre-configured Super Admin Account
+## 🔐 Super Admin Account
 
-A super admin account is automatically created:
+Super Admin credentials for this deployment:
 - **Email**: rion.exa01@gmail.com
 - **Password**: tfm123
 - **Role**: Super Admin (full system access)
+
+Notes:
+- Make sure Email/Password sign-in is enabled in Firebase Authentication.
+- Create the Authentication user with the email above (via Firebase Console or by registering through the app).
+- If the auth user exists but the database profile is missing, the app auto-initializes the profile on first login for this email.
 
 ## 📋 Sample Data (Optional)
 
@@ -61,7 +67,7 @@ To populate the system with sample data for testing:
 
 ### For Admins:
 - ✅ View member directory
-- ✅ Track daily attendance
+- ✅ Track Sunday attendance
 - ✅ Generate reports
 - ✅ Export data
 - ❌ Cannot manage user accounts
@@ -72,6 +78,14 @@ To populate the system with sample data for testing:
 - ❌ Cannot access attendance tracking
 - ❌ Cannot access reports
 - ❌ Cannot manage members or users
+
+## 🗓️ Attendance Rules & Exports
+
+- Attendance is recorded for Sundays only. Saving attendance on non-Sunday dates is blocked.
+- The dashboard shows the number of concluded services as the count of Sundays with attendance records.
+- Export options:
+  - **Export Attendance** (Attendance page): downloads a CSV for the selected Sunday with columns: Member Name, Email, Phone, Registered At, New Member?, Present/Absent. The member list is fetched live, so new members appear automatically and absent members are clearly marked.
+  - **Export Members** (Members page): exports the current member directory as CSV.
 
 ## 📱 Browser Compatibility
 - Chrome, Firefox, Safari, Edge (latest versions)
@@ -91,4 +105,4 @@ To populate the system with sample data for testing:
 
 ---
 
-**Ready to go!** Your church registration system is now live and ready to use. 
+**Ready to go!** Your church registration system is now live and ready to use.
