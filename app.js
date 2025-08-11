@@ -76,8 +76,23 @@ loginForm.addEventListener('submit', async (e) => {
             initializeDashboard();
             showNotification('Login successful!');
         } else {
-            showNotification('User data not found', 'error');
-            await auth.signOut();
+            // Auto-initialize Super Admin profile if the auth user matches the configured email
+            if (user.email === 'rion.exa01@gmail.com') {
+                await database.ref(`users/${user.uid}`).set({
+                    name: 'Rion Exa',
+                    email: user.email,
+                    role: 'super-admin',
+                    createdAt: Date.now()
+                });
+                currentUser = user;
+                currentUserRole = 'super-admin';
+                showScreen('dashboardScreen');
+                initializeDashboard();
+                showNotification('Super Admin profile initialized.');
+            } else {
+                showNotification('User data not found', 'error');
+                await auth.signOut();
+            }
         }
     } catch (error) {
         showNotification(error.message, 'error');
@@ -470,6 +485,12 @@ document.getElementById('saveAttendanceBtn').addEventListener('click', async () 
         showNotification('Please select a date', 'error');
         return;
     }
+    // Enforce Sundays only
+    const day = new Date(date + 'T00:00:00').getDay();
+    if (day !== 0) {
+        showNotification('Attendance can only be saved for Sundays.', 'error');
+        return;
+    }
     
     try {
         await database.ref(`attendance/${date}`).set(attendanceData);
@@ -496,6 +517,12 @@ async function loadOverviewData() {
         
         const attendanceRate = totalMembers > 0 ? Math.round((presentCount / totalMembers) * 100) : 0;
         document.getElementById('attendanceRate').textContent = `${attendanceRate}%`;
+        
+        // Count concluded services (number of Sundays with attendance records)
+        const allAttendanceSnap = await database.ref('attendance').once('value');
+        const allAttendance = allAttendanceSnap.val() || {};
+        const sundayDates = Object.keys(allAttendance).filter(d => new Date(d + 'T00:00:00').getDay() === 0);
+        document.getElementById('totalServices').textContent = sundayDates.length;
     } catch (error) {
         console.error('Error loading attendance:', error);
     }
@@ -503,6 +530,62 @@ async function loadOverviewData() {
     // Load recent activity
     await loadRecentActivity();
 }
+
+// Warn when non-Sunday is selected
+document.getElementById('attendanceDate').addEventListener('change', (e) => {
+    const date = e.target.value;
+    if (!date) return;
+    const day = new Date(date + 'T00:00:00').getDay();
+    if (day !== 0) {
+        showNotification('Please select a Sunday. Attendance is recorded on Sundays only.', 'info');
+    }
+});
+
+// Export Attendance (CSV) with Present/Absent and New Member indicator
+document.getElementById('exportAttendanceExcelBtn').addEventListener('click', async () => {
+    const date = document.getElementById('attendanceDate').value;
+    if (!date) {
+        showNotification('Please select a date', 'error');
+        return;
+    }
+    try {
+        await loadMembers();
+        await loadAttendanceData();
+
+        const header = ['Member Name', 'Email', 'Phone', 'Registered At', 'New Member?', `Present (${date})`];
+        const rows = [header];
+
+        const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+        const dateMs = new Date(date + 'T00:00:00').getTime();
+
+        Object.entries(members).forEach(([id, m]) => {
+            const registeredAtMs = typeof m.registeredAt === 'number' ? m.registeredAt : 0;
+            const isNew = registeredAtMs && (dateMs - registeredAtMs <= oneWeekMs);
+            const present = !!attendanceData[id];
+            rows.push([
+                m.name || '',
+                m.email || '',
+                m.phone || '',
+                registeredAtMs ? new Date(registeredAtMs).toISOString().slice(0, 10) : '',
+                isNew ? 'Yes' : 'No',
+                present ? 'Present' : 'Absent'
+            ]);
+        });
+
+        const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_${date}.csv`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+        showNotification('Attendance exported.');
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification(error.message, 'error');
+    }
+});
 
 async function loadRecentActivity() {
     const activityList = document.getElementById('recentActivityList');
@@ -784,8 +867,23 @@ auth.onAuthStateChanged(async (user) => {
                 showScreen('dashboardScreen');
                 initializeDashboard();
             } else {
-                showNotification('User data not found', 'error');
-                await auth.signOut();
+                // Auto-initialize Super Admin profile if the auth user matches the configured email
+                if (user.email === 'rion.exa01@gmail.com') {
+                    await database.ref(`users/${user.uid}`).set({
+                        name: 'Rion Exa',
+                        email: user.email,
+                        role: 'super-admin',
+                        createdAt: Date.now()
+                    });
+                    currentUser = user;
+                    currentUserRole = 'super-admin';
+                    showScreen('dashboardScreen');
+                    initializeDashboard();
+                    showNotification('Super Admin profile initialized.');
+                } else {
+                    showNotification('User data not found', 'error');
+                    await auth.signOut();
+                }
             }
         } catch (error) {
             showNotification(error.message, 'error');
