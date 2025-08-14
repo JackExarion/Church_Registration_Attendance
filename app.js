@@ -22,6 +22,25 @@ let members = [];
 let attendanceData = {};
 let users = [];
 let pendingMemberRegistration = null;
+let previousSection = 'members'; // Track previous section before edit
+
+function returnToPreviousSection() {
+    // First, show the dashboard screen again
+    showScreen('dashboardScreen');
+
+    // Then set nav highlight
+    document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+    document.querySelector(`[data-section="${previousSection}"]`)?.classList.add('active');
+
+    // Show the correct content section
+    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+    document.getElementById(previousSection).classList.add('active');
+
+    // Load its data
+    loadSectionData(previousSection);
+}
+
+
 
 // DOM Elements
 const loginScreen = document.getElementById('loginScreen');
@@ -382,13 +401,19 @@ async function loadMembersList() {
                     </div>
                 </div>
                 <div class="member-actions">
-                    <button class="btn btn-secondary" onclick="editMember('${member.id}')">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-danger" onclick="deleteMember('${member.id}')">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
+    ${
+        (currentUserRole === 'admin' || currentUserRole === 'super-admin') 
+        ? `
+            <button class="btn btn-secondary" onclick="editMember('${member.id}')">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button class="btn btn-danger" onclick="deleteMember('${member.id}')">
+                <i class="fas fa-trash"></i>
+            </button>
+        `
+        : ''
+    }
+</div>
             </div>
         `;
     }).join('');
@@ -760,12 +785,74 @@ function deleteUser(userId) {
     }
 }
 
-// Member Management Functions
+async function handleEditMemberForm(e) {
+    e.preventDefault();
+    
+    const memberId = document.getElementById('memberEditForm').dataset.memberId;
+    const updatedMemberData = {
+        name: document.getElementById('editMemberName').value,
+        email: document.getElementById('editMemberEmail').value,
+        phone: document.getElementById('editMemberPhone').value,
+        address: document.getElementById('editMemberAddress').value,
+        birthDate: document.getElementById('editMemberBirthDate').value,
+        gender: document.getElementById('editMemberGender').value,
+        notes: document.getElementById('editMemberNotes').value,
+    };
+    
+    try {
+        await database.ref(`members/${memberId}`).update(updatedMemberData);
+        showNotification('Member details updated successfully!');
+        returnToPreviousSection(); // Return to previous section
+        loadMembersList(); // Refresh the members list
+    } catch (error) {
+        showNotification('Error updating member details: ' + error.message, 'error');
+    }
+}
+
+document.getElementById('memberEditForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const memberId = document.getElementById('memberEditForm').dataset.memberId;
+    const updatedMemberData = {
+        name: document.getElementById('editMemberName').value,
+        email: document.getElementById('editMemberEmail').value,
+        phone: document.getElementById('editMemberPhone').value,
+        address: document.getElementById('editMemberAddress').value,
+        birthDate: document.getElementById('editMemberBirthDate').value,
+        gender: document.getElementById('editMemberGender').value,
+        notes: document.getElementById('editMemberNotes').value,
+    };
+    
+    try {
+        await database.ref(`members/${memberId}`).update(updatedMemberData);
+        showNotification('Member details updated successfully!');
+        returnToPreviousSection(); // Return to previous section
+        loadMembersList(); // Refresh the members list
+    } catch (error) {
+        showNotification('Error updating member details: ' + error.message, 'error');
+    }
+});
+
+// Cancel button event listener
+document.getElementById('cancelEditBtn').addEventListener('click', () => {
+    returnToPreviousSection(); // Return to previous section
+});
 function editMember(memberId) {
+    previousSection = document.querySelector('.content-section.active')?.id || 'members';
     const member = members[memberId];
     if (!member) return;
     
-    showNotification('Member editing functionality is not available in this version. Please contact an administrator.', 'info');
+    // Show member editing form
+    const memberForm = document.getElementById('memberEditForm');
+    memberForm.querySelector('#editMemberName').value = member.name;
+    memberForm.querySelector('#editMemberEmail').value = member.email;
+    memberForm.querySelector('#editMemberPhone').value = member.phone || '';
+    memberForm.querySelector('#editMemberAddress').value = member.address || '';
+    memberForm.querySelector('#editMemberBirthDate').value = member.birthDate || '';
+    memberForm.querySelector('#editMemberGender').value = member.gender || '';
+    memberForm.querySelector('#editMemberNotes').value = member.notes || '';
+    memberForm.dataset.memberId = memberId; // Store member ID for later use
+    showScreen('memberEditScreen'); // Show the edit screen
 }
 
 function deleteMember(memberId) {
