@@ -468,7 +468,7 @@ document.getElementById('loadMembersBtn').addEventListener('click', async () => 
                 <div class="attendance-toggle">
                     <span>Present</span>
                     <div class="toggle-switch ${isPresent ? 'active' : ''}" 
-                         onclick="toggleAttendance('${member.id}')"></div>
+                        onclick="toggleAttendance('${member.id}')"></div>
                 </div>
             </div>
         `;
