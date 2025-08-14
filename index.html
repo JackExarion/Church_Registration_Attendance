@@ -233,12 +233,11 @@
                             <button id="addMemberBtn" class="btn btn-primary">
                                 <i class="fas fa-plus"></i> Add New Member
                             </button>
-                            <input type="text" id="memberSearch" placeholder="Search members..." class="search-input">
-                            <button id="exportMembersBtn" class="btn btn-secondary">Export</button>
+                            <input type="text" id="memberSearchRegistration" placeholder="Search members..." class="search-input">
+                            <button id="exportMembersBtnRegistration" class="btn btn-secondary">Export</button>
                         </div>
-                        
                         <!-- Members List -->
-                        <div id="membersList" class="members-list">
+                        <div id="membersListRegistration" class="members-list">
                             <!-- Members list will be populated here -->
                         </div>
                     </div>
@@ -268,10 +267,10 @@
                     <div id="members" class="content-section">
                         <h2>Members Directory</h2>
                         <div class="members-controls">
-                            <input type="text" id="memberSearch" placeholder="Search members..." class="search-input">
-                            <button id="exportMembersBtn" class="btn btn-secondary">Export</button>
+                            <input type="text" id="memberSearchMembers" placeholder="Search members..." class="search-input">
+                            <button id="exportMembersBtnMembers" class="btn btn-secondary">Export</button>
                         </div>
-                        <div id="membersList" class="members-list">
+                        <div id="membersListMembers" class="members-list">
                             <!-- Members list will be populated here -->
                         </div>
                     </div>
@@ -305,33 +304,53 @@
                     <!-- Admin Section -->
                     <div id="admin" class="content-section">
                         <h2>Admin Panel</h2>
-                        <div class="admin-grid">
-                            <div class="admin-card">
-                                <h3>User Management</h3>
-                                <div id="usersList" class="admin-list">
-                                    <!-- Users list will be populated here -->
-                                </div>
-                            </div>
-                            <div class="admin-card">
-                                <h3>System Settings</h3>
-                                <form id="systemSettingsForm" class="settings-form">
-                                    <div class="form-group">
-                                        <label for="churchName">Church Name</label>
-                                        <input type="text" id="churchName" value="Our Church">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="serviceTime">Default Service Time</label>
-                                        <input type="time" id="serviceTime" value="10:00">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="maxCapacity">Maximum Capacity</label>
-                                        <input type="number" id="maxCapacity" value="200">
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save Settings</button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                        <!-- Activity/Announcement Post Form -->
+    <div id="activityPostFormContainer" style="margin-bottom: 2em;">
+        <form id="activityPostForm">
+            <h4>Post Announcement / Activity</h4>
+            <div>
+                <input type="text" id="activityTitle" placeholder="Title" required class="form-control" />
+            </div>
+            <div>
+                <textarea id="activityMessage" placeholder="Message" required class="form-control"></textarea>
+            </div>
+            <div>
+                <select id="activityType" class="form-control">
+                    <option value="announcement">Announcement</option>
+                    <option value="event">Event</option>
+                    <option value="general">General</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="margin-top: 0.5em;">Post</button>
+        </form>
+    </div>
+    <div class="admin-grid">
+        <div class="admin-card">
+            <h3>User Management</h3>
+            <div id="usersList" class="admin-list">
+                <!-- Users list will be populated here -->
+            </div>
+        </div>
+        <div class="admin-card">
+            <h3>System Settings</h3>
+            <form id="systemSettingsForm" class="settings-form">
+                <div class="form-group">
+                    <label for="churchName">Church Name</label>
+                    <input type="text" id="churchName" value="Our Church">
+                </div>
+                <div class="form-group">
+                    <label for="serviceTime">Default Service Time</label>
+                    <input type="time" id="serviceTime" value="10:00">
+                </div>
+                <div class="form-group">
+                    <label for="maxCapacity">Maximum Capacity</label>
+                    <input type="number" id="maxCapacity" value="200">
+                </div>
+                <button type="submit" class="btn btn-primary">Save Settings</button>
+            </form>
+        </div>
+    </div>
+</div>
                 </div>
             </div>
         </div>
@@ -344,4 +363,4 @@
     
     <script src="app.js"></script>
 </body>
-</html> 
+</html>

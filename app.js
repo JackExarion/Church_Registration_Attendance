@@ -275,10 +275,13 @@ async function initializeDashboard() {
     
     // Show/hide admin section based on role
     const adminSection = document.getElementById('adminSection');
-    if (currentUserRole === 'super-admin') {
+    const activityPostFormContainer = document.getElementById('activityPostFormContainer');
+    if (currentUserRole === 'super-admin' || currentUserRole === 'admin') {
         adminSection.style.display = 'block';
+        if (activityPostFormContainer) activityPostFormContainer.style.display = 'block';
     } else {
         adminSection.style.display = 'none';
+        if (activityPostFormContainer) activityPostFormContainer.style.display = 'none';
     }
     
     // Hide navigation items for members
@@ -356,75 +359,59 @@ async function loadMembers() {
     }
 }
 
-async function loadMembersList() {
-    // Prefer the members list inside the currently visible section to avoid writing
-    // into a hidden container when duplicate IDs exist (registration vs members).
+function getMembersSectionElements() {
     const activeSection = document.querySelector('.content-section.active');
-    const membersList = (activeSection && (activeSection.querySelector('#membersList') || activeSection.querySelector('.members-list')))
-        || document.getElementById('membersList');
-    console.log('=== LOADING MEMBERS LIST ===');
-    console.log('Active section:', activeSection ? activeSection.id : 'none');
-    console.log('Members list element:', membersList);
-    
+    if (!activeSection) return {};
+
+    if (activeSection.id === 'registration') {
+        return {
+            membersList: document.getElementById('membersListRegistration'),
+            searchInput: document.getElementById('memberSearchRegistration'),
+            exportBtn: document.getElementById('exportMembersBtnRegistration')
+        };
+    } else if (activeSection.id === 'members') {
+        return {
+            membersList: document.getElementById('membersListMembers'),
+            searchInput: document.getElementById('memberSearchMembers'),
+            exportBtn: document.getElementById('exportMembersBtnMembers')
+        };
+    }
+    return {};
+}
+
+// Update: loadMembersList uses correct container and removes Edit/Delete in Members panel
+async function loadMembersList() {
+    const { membersList } = getMembersSectionElements();
+    if (!membersList) return;
+
     membersList.innerHTML = '<div class="loading">Loading members...</div>';
-    
     await loadMembers();
-    
+
     const membersArray = Object.entries(members).map(([id, member]) => ({
         id,
         ...member
     }));
-    
-    console.log('Members array for display:', membersArray);
-    console.log('Members array length:', membersArray.length);
-    
+
     if (membersArray.length === 0) {
-        console.log('No members found, showing "no data" message');
-        membersList.innerHTML = '<div class="no-data">No members found</div>';
+        membersList.innerHTML = '<div class="empty">No members found.</div>';
         return;
     }
-    
-    console.log('Generating HTML for members...');
-    const membersHTML = membersArray.map(member => {
-        console.log('Processing member:', member);
-        return `
-            <div class="member-item">
-                <div class="member-avatar">
-                    ${member.name.charAt(0).toUpperCase()}
-                </div>
-                <div class="member-details">
-                    <div class="member-name">${member.name}</div>
-                    <div class="member-info-row">
-                        <span><i class="fas fa-envelope"></i> ${member.email}</span>
-                        <span><i class="fas fa-phone"></i> ${member.phone || 'Not provided'}</span>
-                        <span><i class="fas fa-birthday-cake"></i> ${member.birthDate || 'Not provided'}</span>
-                    </div>
-                </div>
+
+    // Only show Edit/Delete in Member Management (admin) panel
+    const isAdminPanel = membersList.id === 'membersListRegistration';
+
+    membersList.innerHTML = membersArray.map(member => `
+        <div class="member-item">
+            <span>${member.name}</span>
+            <span>${member.email}</span>
+            ${isAdminPanel ? `
                 <div class="member-actions">
-    ${
-        (currentUserRole === 'admin' || currentUserRole === 'super-admin') 
-        ? `
-            <button class="btn btn-secondary" onclick="editMember('${member.id}')">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button class="btn btn-danger" onclick="deleteMember('${member.id}')">
-                <i class="fas fa-trash"></i>
-            </button>
-        `
-        : ''
-    }
-</div>
-            </div>
-        `;
-    }).join('');
-    
-    console.log('Generated HTML length:', membersHTML.length);
-    console.log('Setting innerHTML...');
-    
-    membersList.innerHTML = membersHTML;
-    
-    console.log('Members list updated successfully');
-    console.log('=== END LOADING MEMBERS LIST ===');
+                    <button class="btn btn-secondary" onclick="editMember('${member.id}')">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteMember('${member.id}')">Delete</button>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
 }
 
 // Attendance Management
@@ -635,6 +622,7 @@ async function loadRecentActivity() {
                 </div>
                 <div class="activity-details">
                     <div class="activity-title">${activity.title}</div>
+                    ${activity.message ? `<div class="activity-message">${activity.message}</div>` : ''}
                     <div class="activity-time">${new Date(activity.timestamp).toLocaleString()}</div>
                 </div>
             </div>
@@ -649,7 +637,10 @@ function getActivityIcon(type) {
         'registration': 'fa-user-plus',
         'attendance': 'fa-calendar-check',
         'member_update': 'fa-user-edit',
-        'login': 'fa-sign-in-alt'
+        'login': 'fa-sign-in-alt',
+        'announcement': 'fa-bullhorn',
+        'event': 'fa-calendar',
+        'general': 'fa-info-circle'
     };
     return icons[type] || 'fa-info-circle';
 }
@@ -875,230 +866,140 @@ document.getElementById('addMemberBtn').addEventListener('click', () => {
 });
 
 // Search functionality
-document.getElementById('memberSearch').addEventListener('input', (e) => {
-    const searchTerm = e.target.value.toLowerCase();
-    const memberItems = document.querySelectorAll('.member-item');
-    
-    memberItems.forEach(item => {
-        const memberName = item.querySelector('.member-name').textContent.toLowerCase();
-        const memberEmail = item.querySelector('.member-email').textContent.toLowerCase();
-        
-        if (memberName.includes(searchTerm) || memberEmail.includes(searchTerm)) {
-            item.style.display = 'flex';
-        } else {
-            item.style.display = 'none';
-        }
-    });
+document.getElementById('memberSearchRegistration').addEventListener('input', (e) => {
+    filterMembersList(e.target.value, 'registration');
+});
+document.getElementById('memberSearchMembers').addEventListener('input', (e) => {
+    filterMembersList(e.target.value, 'members');
 });
 
-// Export functionality
-document.getElementById('exportMembersBtn').addEventListener('click', () => {
-    const membersArray = Object.entries(members).map(([id, member]) => ({
-        id,
-        ...member
-    }));
-    
-    const csvContent = [
-        ['Name', 'Email', 'Phone', 'Address', 'Birth Date', 'Gender'],
-        ...membersArray.map(member => [
-            member.name,
-            member.email,
-            member.phone,
-            member.address,
-            member.birthDate,
-            member.gender
-        ])
-    ].map(row => row.join(',')).join('\n');
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
+function filterMembersList(query, section) {
+    const listId = section === 'registration' ? 'membersListRegistration' : 'membersListMembers';
+    const membersList = document.getElementById(listId);
+    if (!membersList) return;
+
+    const lowerQuery = query.toLowerCase();
+    const filtered = Object.entries(members)
+        .filter(([id, member]) =>
+            member.name.toLowerCase().includes(lowerQuery) ||
+            member.email.toLowerCase().includes(lowerQuery)
+        )
+        .map(([id, member]) => ({
+            id,
+            ...member
+        }));
+
+    if (filtered.length === 0) {
+        membersList.innerHTML = '<div class="empty">No members found.</div>';
+        return;
+    }
+
+    const isAdminPanel = listId === 'membersListRegistration';
+
+    membersList.innerHTML = filtered.map(member => `
+        <div class="member-item">
+            <span>${member.name}</span>
+            <span>${member.email}</span>
+            ${isAdminPanel ? `
+                <div class="member-actions">
+                    <button class="btn btn-secondary" onclick="editMember('${member.id}')">Edit</button>
+                    <button class="btn btn-danger" onclick="deleteMember('${member.id}')">Delete</button>
+                </div>
+            ` : ''}
+        </div>
+    `).join('');
+}
+
+// Update: Export functionality for both sections
+document.getElementById('exportMembersBtnRegistration').addEventListener('click', () => {
+    exportMembers('registration');
+});
+document.getElementById('exportMembersBtnMembers').addEventListener('click', () => {
+    exportMembers('members');
+});
+
+function exportMembers(section) {
+    // Simple CSV export
+    const rows = [['Name', 'Email', 'Phone', 'Address', 'Birth Date', 'Gender', 'Notes']];
+    Object.values(members).forEach(member => {
+        rows.push([
+            member.name || '',
+            member.email || '',
+            member.phone || '',
+            member.address || '',
+            member.birthDate || '',
+            member.gender || '',
+            member.notes || ''
+        ]);
+    });
+    const csv = rows.map(r => r.map(x => `"${x.replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'church_members.csv';
+    a.download = 'members.csv';
+    document.body.appendChild(a);
     a.click();
-    window.URL.revokeObjectURL(url);
-    
-    showNotification('Members exported successfully!');
-});
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
 
-// System Settings
-document.getElementById('systemSettingsForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    const settings = {
-        churchName: document.getElementById('churchName').value,
-        serviceTime: document.getElementById('serviceTime').value,
-        maxCapacity: parseInt(document.getElementById('maxCapacity').value)
-    };
-    
-    try {
-        await database.ref('settings').set(settings);
-        showNotification('Settings saved successfully!');
-    } catch (error) {
-        showNotification(error.message, 'error');
-    }
-});
+// Activity/Announcement Post Form Handler (already present, but ensure it's at the bottom)
+const activityPostForm = document.getElementById('activityPostForm');
+if (activityPostForm) {
+    activityPostForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('activityTitle').value.trim();
+        const message = document.getElementById('activityMessage').value.trim();
+        const type = document.getElementById('activityType').value;
 
-// Authentication State Observer
-auth.onAuthStateChanged(async (user) => {
-    if (user) {
-        // User is signed in
+        if (!title || !message) {
+            showNotification('Please fill in all fields', 'error');
+            return;
+        }
+
         try {
-            const userRef = database.ref(`users/${user.uid}`);
-            const snapshot = await userRef.once('value');
-            const userData = snapshot.val();
-            
-            if (userData) {
-                currentUser = user;
-                currentUserRole = userData.role;
-                showScreen('dashboardScreen');
-                initializeDashboard();
-            } else {
-                // Auto-initialize Super Admin profile if the auth user matches the configured email
-                if (user.email === 'rion.exa01@gmail.com') {
-                    await database.ref(`users/${user.uid}`).set({
-                        name: 'Rion Exa',
-                        email: user.email,
-                        role: 'super-admin',
-                        createdAt: Date.now()
-                    });
-                    currentUser = user;
-                    currentUserRole = 'super-admin';
-                    showScreen('dashboardScreen');
-                    initializeDashboard();
-                    showNotification('Super Admin profile initialized.');
-                } else {
-                    showNotification('User data not found', 'error');
-                    await auth.signOut();
-                }
-            }
+            await database.ref('activities').push({
+                title,
+                message,
+                type,
+                postedBy: currentUser.email,
+                timestamp: Date.now()
+            });
+            showNotification('Announcement/Activity posted!');
+            activityPostForm.reset();
+            loadRecentActivity();
         } catch (error) {
             showNotification(error.message, 'error');
-            await auth.signOut();
         }
-    } else {
-        // User is signed out
-        currentUser = null;
-        currentUserRole = null;
-        showScreen('loginScreen');
-    }
-});
+    });
+}
 
-// Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
-    // Set default date for attendance
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('attendanceDate').value = today;
-    
-    // Initialize the specified super admin account
-    initializeSuperAdminAccount();
-    
-    // Load initial data if user is already authenticated
-    if (auth.currentUser) {
-        showScreen('dashboardScreen');
-        initializeDashboard();
-    }
-});
-
-// Initialize the specified super admin account
-async function initializeSuperAdminAccount() {
+// Update: loadRecentActivity to show activity/announcement posts
+async function loadRecentActivity() {
+    const activityList = document.getElementById('recentActivityList');
     try {
-        // Check if the account already exists
-        const userRef = database.ref('users');
-        const snapshot = await userRef.orderByChild('email').equalTo('rion.exa01@gmail.com').once('value');
-        
-        if (!snapshot.exists()) {
-            // Create the super admin account
-            const newUserRef = userRef.push();
-            await newUserRef.set({
-                name: "Rion Exa",
-                email: "rion.exa01@gmail.com",
-                role: "super-admin",
-                createdAt: Date.now()
-            });
-            
-            console.log("Super admin account created: rion.exa01@gmail.com");
-        }
+        const snapshot = await database.ref('activities').orderByChild('timestamp').limitToLast(10).once('value');
+        const activities = snapshot.val() || {};
+        const activitiesArray = Object.values(activities).sort((a, b) => b.timestamp - a.timestamp);
+
+        activityList.innerHTML = activitiesArray.map(activity => `
+            <div class="activity-item">
+                <div class="activity-icon">
+                    <i class="fas ${getActivityIcon(activity.type)}"></i>
+                </div>
+                <div class="activity-details">
+                    <div class="activity-title">${activity.title}</div>
+                    ${activity.message ? `<div class="activity-message">${activity.message}</div>` : ''}
+                    <div class="activity-meta">
+                        <span class="activity-type">${activity.type}</span>
+                        <span class="activity-user">${activity.postedBy || ''}</span>
+                        <span class="activity-time">${new Date(activity.timestamp).toLocaleString()}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
     } catch (error) {
-        console.error("Error initializing super admin account:", error);
+        activityList.innerHTML = '<div class="error">Failed to load activity.</div>';
     }
 }
-
-// Debug function to check current state
-function debugCurrentState() {
-    console.log('=== DEBUG CURRENT STATE ===');
-    console.log('Current User:', currentUser);
-    console.log('Current User Role:', currentUserRole);
-    console.log('Members Count:', Object.keys(members).length);
-    console.log('Members Data:', members);
-    console.log('Users Count:', Object.keys(users).length);
-    console.log('Users Data:', users);
-    console.log('Pending Registration:', pendingMemberRegistration);
-    console.log('==========================');
-}
-
-// Make debug function available globally
-window.debugCurrentState = debugCurrentState;
-
-// Manual refresh function for members
-function refreshMembersList() {
-    console.log('=== MANUAL REFRESH MEMBERS LIST ===');
-    loadMembersList();
-}
-
-// Make refresh function available globally
-window.refreshMembersList = refreshMembersList;
-
-// Function to fix existing member data
-async function fixExistingMemberData() {
-    console.log('=== FIXING EXISTING MEMBER DATA ===');
-    
-    try {
-        const snapshot = await database.ref('members').once('value');
-        const membersData = snapshot.val() || {};
-        
-        for (const [memberId, member] of Object.entries(membersData)) {
-            if (!member.name || !member.email) {
-                console.log('Fixing member:', memberId, member);
-                
-                // Try to find user data to get name and email
-                const userSnapshot = await database.ref('users').orderByChild('email').once('value');
-                const usersData = userSnapshot.val() || {};
-                
-                let foundUser = null;
-                for (const [userId, user] of Object.entries(usersData)) {
-                    if (user.email === member.email || user.name === member.name) {
-                        foundUser = user;
-                        break;
-                    }
-                }
-                
-                if (foundUser) {
-                    const updatedData = {
-                        name: foundUser.name,
-                        email: foundUser.email,
-                        ...member
-                    };
-                    
-                    await database.ref(`members/${memberId}`).update(updatedData);
-                    console.log('Fixed member data for:', memberId);
-                } else {
-                    console.log('Could not find user data for member:', memberId);
-                }
-            }
-        }
-        
-        console.log('=== FINISHED FIXING MEMBER DATA ===');
-        showNotification('Member data fix completed!');
-        
-        // Refresh the members list
-        await loadMembersList();
-        
-    } catch (error) {
-        console.error('Error fixing member data:', error);
-        showNotification('Error fixing member data: ' + error.message, 'error');
-    }
-}
-
-// Make fix function available globally
-window.fixExistingMemberData = fixExistingMemberData; 

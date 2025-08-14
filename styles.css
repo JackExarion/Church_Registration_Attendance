@@ -504,45 +504,34 @@ body {
     padding: 20px;
     border-bottom: 1px solid #e9ecef;
     transition: background-color 0.3s ease;
+    justify-content: space-between; /* Add this line */
 }
 
-.member-item:hover {
-    background: #f8f9fa;
+.member-item > span {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
-.member-avatar {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    background: #667eea;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    margin-right: 15px;
-}
-
-.member-details {
-    flex: 1;
-}
-
-.member-name {
-    font-weight: 500;
-    color: #333;
-    margin-bottom: 5px;
-}
-
-.member-info-row {
-    display: flex;
-    gap: 20px;
-    font-size: 0.9rem;
-    color: #666;
-}
-
+/* Group action buttons to the right */
 .member-actions {
     display: flex;
     gap: 10px;
+    margin-left: 20px;
+}
+
+/* Responsive: stack vertically on small screens */
+@media (max-width: 600px) {
+    .member-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 15px;
+    }
+    .member-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-left: 0;
+    }
 }
 
 /* Reports Styles */
@@ -769,6 +758,62 @@ body {
     }
 }
 
+/* Make member-item stack vertically on small screens */
+@media (max-width: 600px) {
+    .member-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+        padding: 15px;
+    }
+    .members-controls,
+    .member-management-controls {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    .search-input {
+        width: 100%;
+        min-width: 0;
+    }
+    .btn,
+    .btn-primary,
+    .btn-secondary,
+    .btn-danger {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+    .main-content {
+        padding: 10px;
+    }
+    .navbar {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+    }
+    .admin-grid,
+    .stats-grid,
+    .reports-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Make sidebar collapsible on mobile */
+@media (max-width: 900px) {
+    .dashboard-content {
+        flex-direction: column;
+    }
+    .sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #e9ecef;
+        padding: 10px 0;
+    }
+    .main-content {
+        padding: 10px;
+    }
+}
+
 /* Loading States */
 .loading {
     display: flex;
@@ -834,4 +879,4 @@ body {
         transform: translateX(0);
         opacity: 1;
     }
-} 
+}
