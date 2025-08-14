@@ -454,12 +454,12 @@ document.getElementById('loadMembersBtn').addEventListener('click', async () => 
                 </div>
                 <div class="attendance-toggle">
                     <span>Present</span>
-                    <div class="toggle-switch ${isPresent ? 'active' : ''}" 
+                    <div class="toggle-switch${isPresent ? ' active' : ''}"
                         onclick="toggleAttendance('${member.id}')"></div>
                 </div>
             </div>
         `;
-    }).join('');
+    }).join("");
 });
 
 function toggleAttendance(memberId) {
@@ -553,7 +553,7 @@ document.getElementById('attendanceDate').addEventListener('change', (e) => {
     }
 });
 
-// Export Attendance (CSV) with Present/Absent and New Member indicator
+// Enhanced Export Attendance (CSV) for selected date, showing new/updated members and comparison with previous date
 document.getElementById('exportAttendanceExcelBtn').addEventListener('click', async () => {
     const date = document.getElementById('attendanceDate').value;
     if (!date) {
@@ -564,23 +564,57 @@ document.getElementById('exportAttendanceExcelBtn').addEventListener('click', as
         await loadMembers();
         await loadAttendanceData();
 
-        const header = ['Member Name', 'Email', 'Phone', 'Registered At', 'New Member?', `Present (${date})`];
-        const rows = [header];
+        // Find the previous Sunday before the selected date
+        const selectedDateObj = new Date(date + 'T00:00:00');
+        let prevSundayObj = new Date(selectedDateObj);
+        prevSundayObj.setDate(selectedDateObj.getDate() - 7);
+        const prevDate = prevSundayObj.toISOString().slice(0, 10);
 
+        // Load previous attendance and members
+        const prevAttendanceSnap = await database.ref(`attendance/${prevDate}`).once('value');
+        const prevAttendance = prevAttendanceSnap.val() || {};
+
+        // For new member detection: registeredAt within 7 days before selected date
         const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
-        const dateMs = new Date(date + 'T00:00:00').getTime();
+        const dateMs = selectedDateObj.getTime();
+
+        // For updated member detection: compare member fields between now and previous
+        // (Assume members DB is always current; so "updated" means registered before prevDate but present now)
+        // We'll mark as "New" if registeredAt > prevDate, "Updated" if present now but not present before
+
+        const header = [
+            'Member Name', 'Email', 'Phone', 'Registered At', 'New Member?', 
+            `Present (${prevDate})`, `Present (${date})`, 'Status'
+        ];
+        const rows = [header];
 
         Object.entries(members).forEach(([id, m]) => {
             const registeredAtMs = typeof m.registeredAt === 'number' ? m.registeredAt : 0;
-            const isNew = registeredAtMs && (dateMs - registeredAtMs <= oneWeekMs);
-            const present = !!attendanceData[id];
+            const registeredAtDate = registeredAtMs ? new Date(registeredAtMs).toISOString().slice(0, 10) : '';
+            const isNew = registeredAtMs && (dateMs - registeredAtMs < oneWeekMs);
+            const presentPrev = !!prevAttendance[id];
+            const presentNow = !!attendanceData[id];
+
+            let status = '';
+            if (isNew) {
+                status = 'New Member';
+            } else if (!presentPrev && presentNow) {
+                status = 'Updated (Now Present)';
+            } else if (presentPrev && !presentNow) {
+                status = 'Updated (Now Absent)';
+            } else {
+                status = '';
+            }
+
             rows.push([
                 m.name || '',
                 m.email || '',
                 m.phone || '',
-                registeredAtMs ? new Date(registeredAtMs).toISOString().slice(0, 10) : '',
+                registeredAtDate,
                 isNew ? 'Yes' : 'No',
-                present ? 'Present' : 'Absent'
+                presentPrev ? 'Present' : 'Absent',
+                presentNow ? 'Present' : 'Absent',
+                status
             ]);
         });
 
@@ -589,32 +623,101 @@ document.getElementById('exportAttendanceExcelBtn').addEventListener('click', as
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `attendance_${date}.csv`;
+        a.download = `attendance_comparison_${date}.csv`;
         a.click();
         window.URL.revokeObjectURL(url);
-        showNotification('Attendance exported.');
+        showNotification('Attendance comparison exported.');
     } catch (error) {
         console.error('Export error:', error);
         showNotification(error.message, 'error');
     }
 });
 
-async function loadRecentActivity() {
-    const activityList = document.getElementById('recentActivityList');
-    
-    try {
-        const snapshot = await database.ref('activities').orderByChild('timestamp').limitToLast(5).once('value');
-        const activities = snapshot.val() || {};
-        
-        const activitiesArray = Object.entries(activities)
-            .map(([id, activity]) => ({ id, ...activity }))
-            .sort((a, b) => b.timestamp - a.timestamp);
-        
-        if (activitiesArray.length === 0) {
-            activityList.innerHTML = '<div class="no-data">No recent activity</div>';
+// Activity/Announcement Post Form Handler (send to email and SMS for all members)
+const activityPostForm = document.getElementById('activityPostForm');
+if (activityPostForm) {
+    activityPostForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('activityTitle').value.trim();
+        const message = document.getElementById('activityMessage').value.trim();
+        const type = document.getElementById('activityType').value;
+
+        if (!title || !message) {
+            showNotification('Please fill in all fields', 'error');
             return;
         }
-        
+
+        try {
+            // Save to database
+            await database.ref('activities').push({
+                title,
+                message,
+                type,
+                postedBy: currentUser && currentUser.email ? currentUser.email : '',
+                timestamp: Date.now()
+            });
+
+            // Load members and users if not already loaded
+            if (!members || (Array.isArray(members) && members.length === 0) || (typeof members === 'object' && Object.keys(members).length === 0)) {
+                await loadMembers();
+            }
+            if (!users || users.length === 0) {
+                await loadUsers();
+            }
+
+            // Collect all emails and phone numbers from members and users (admin/super-admin)
+            const emails = new Set();
+            const phones = new Set();
+
+            // Members
+            const memberList = Array.isArray(members) ? members : Object.values(members);
+            memberList.forEach(m => {
+                if (m && m.email) emails.add(m.email);
+                if (m && m.phone) phones.add(m.phone);
+            });
+
+            // Users (admin/super-admin)
+            (Object.values(users) || []).forEach(u => {
+                if (u && u.email) emails.add(u.email);
+                if (u && u.phone) phones.add(u.phone);
+            });
+
+            // Send to backend endpoint for email/SMS
+            fetch('http://localhost:3000/api/send-announcement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title,
+                    message,
+                    emails: Array.from(emails),
+                    phones: Array.from(phones)
+                })
+            }).then(res => {
+                if (res.ok) {
+                    showNotification('Announcement/Activity posted and sent!');
+                } else {
+                    showNotification('Posted, but failed to send to all contacts.', 'warning');
+                }
+            }).catch(() => {
+                showNotification('Posted, but failed to send to all contacts.', 'warning');
+            });
+
+            activityPostForm.reset();
+            if (typeof loadRecentActivity === 'function') loadRecentActivity();
+        } catch (error) {
+            showNotification(error.message, 'error');
+        }
+    });
+}
+
+// Update: loadRecentActivity to show activity/announcement posts
+async function loadRecentActivity() {
+    const activityList = document.getElementById('recentActivityList');
+    try {
+        const snapshot = await database.ref('activities').orderByChild('timestamp').limitToLast(10).once('value');
+        const activities = snapshot.val() || {};
+        const activitiesArray = Object.values(activities).sort((a, b) => b.timestamp - a.timestamp);
+
         activityList.innerHTML = activitiesArray.map(activity => `
             <div class="activity-item">
                 <div class="activity-icon">
@@ -623,26 +726,17 @@ async function loadRecentActivity() {
                 <div class="activity-details">
                     <div class="activity-title">${activity.title}</div>
                     ${activity.message ? `<div class="activity-message">${activity.message}</div>` : ''}
-                    <div class="activity-time">${new Date(activity.timestamp).toLocaleString()}</div>
+                    <div class="activity-meta">
+                        <span class="activity-type">${activity.type}</span>
+                        <span class="activity-user">${activity.postedBy || ''}</span>
+                        <span class="activity-time">${new Date(activity.timestamp).toLocaleString()}</span>
+                    </div>
                 </div>
             </div>
         `).join('');
     } catch (error) {
-        console.error('Error loading activities:', error);
+        activityList.innerHTML = '<div class="error">Failed to load activity.</div>';
     }
-}
-
-function getActivityIcon(type) {
-    const icons = {
-        'registration': 'fa-user-plus',
-        'attendance': 'fa-calendar-check',
-        'member_update': 'fa-user-edit',
-        'login': 'fa-sign-in-alt',
-        'announcement': 'fa-bullhorn',
-        'event': 'fa-calendar',
-        'general': 'fa-info-circle'
-    };
-    return icons[type] || 'fa-info-circle';
 }
 
 // Reports
@@ -942,64 +1036,4 @@ function exportMembers(section) {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-}
-
-// Activity/Announcement Post Form Handler (already present, but ensure it's at the bottom)
-const activityPostForm = document.getElementById('activityPostForm');
-if (activityPostForm) {
-    activityPostForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const title = document.getElementById('activityTitle').value.trim();
-        const message = document.getElementById('activityMessage').value.trim();
-        const type = document.getElementById('activityType').value;
-
-        if (!title || !message) {
-            showNotification('Please fill in all fields', 'error');
-            return;
-        }
-
-        try {
-            await database.ref('activities').push({
-                title,
-                message,
-                type,
-                postedBy: currentUser.email,
-                timestamp: Date.now()
-            });
-            showNotification('Announcement/Activity posted!');
-            activityPostForm.reset();
-            loadRecentActivity();
-        } catch (error) {
-            showNotification(error.message, 'error');
-        }
-    });
-}
-
-// Update: loadRecentActivity to show activity/announcement posts
-async function loadRecentActivity() {
-    const activityList = document.getElementById('recentActivityList');
-    try {
-        const snapshot = await database.ref('activities').orderByChild('timestamp').limitToLast(10).once('value');
-        const activities = snapshot.val() || {};
-        const activitiesArray = Object.values(activities).sort((a, b) => b.timestamp - a.timestamp);
-
-        activityList.innerHTML = activitiesArray.map(activity => `
-            <div class="activity-item">
-                <div class="activity-icon">
-                    <i class="fas ${getActivityIcon(activity.type)}"></i>
-                </div>
-                <div class="activity-details">
-                    <div class="activity-title">${activity.title}</div>
-                    ${activity.message ? `<div class="activity-message">${activity.message}</div>` : ''}
-                    <div class="activity-meta">
-                        <span class="activity-type">${activity.type}</span>
-                        <span class="activity-user">${activity.postedBy || ''}</span>
-                        <span class="activity-time">${new Date(activity.timestamp).toLocaleString()}</span>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    } catch (error) {
-        activityList.innerHTML = '<div class="error">Failed to load activity.</div>';
-    }
 }

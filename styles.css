@@ -675,6 +675,74 @@ body {
     color: #666;
 }
 
+/* Announcement/Activity Post Form Styles */
+#activityPostFormContainer {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+    margin-bottom: 30px;
+    max-width: 600px;
+}
+
+#activityPostForm h4 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 1.3rem;
+    font-weight: 500;
+}
+
+#activityPostForm input,
+#activityPostForm textarea,
+#activityPostForm select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 16px;
+    margin-bottom: 15px;
+    transition: border-color 0.3s ease;
+    background: #fafbfc;
+}
+
+#activityPostForm input:focus,
+#activityPostForm textarea:focus,
+#activityPostForm select:focus {
+    outline: none;
+    border-color: #667eea;
+    background: #fff;
+}
+
+#activityPostForm button[type="submit"] {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    width: 100%;
+    margin-top: 10px;
+}
+
+#activityPostForm button[type="submit"]:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(102, 126, 234, 0.15);
+}
+
+/* Responsive for announcement form */
+@media (max-width: 600px) {
+    #activityPostFormContainer {
+        padding: 15px;
+        max-width: 100%;
+    }
+    #activityPostForm button[type="submit"] {
+        width: 100%;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .dashboard-content {
